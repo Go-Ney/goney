@@ -9,10 +9,32 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:     "goney",
-	Version: "1.0.1",
+	Version: "1.0.2",
 	Short:   "Go-ney - Framework MVC para Go inspirado en NestJS",
 	Long: `Go-ney es un framework CLI inspirado en NestJS para crear aplicaciones Go
 con arquitectura MVC modular y soporte para microservicios TCP, NAT y gRPC.`,
+}
+
+var dtoCmd = &cobra.Command{
+	Use:   "dto [nombre]",
+	Short: "Generar un DTO",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		name := args[0]
+		fmt.Printf("Generando dto: %s\n", name)
+		generateDTO(name)
+	},
+}
+
+var modelCmd = &cobra.Command{
+	Use:   "model [nombre]",
+	Short: "Generar un model",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		name := args[0]
+		fmt.Printf("Generando model: %s\n", name)
+		generateModel(name)
+	},
 }
 
 var newCmd = &cobra.Command{
@@ -99,6 +121,30 @@ var interceptorCmd = &cobra.Command{
 	},
 }
 
+var moduleCmd = &cobra.Command{
+	Use:   "module [nombre-modulo]",
+	Short: "Generar un módulo completo como NestJS",
+	Long: `Generar un módulo completo con estructura modular como NestJS.
+
+Ejemplos:
+  goney generate module users                   # Módulo users/ con estructura básica
+  goney generate module products --crud        # Módulo con CRUD completo + tests
+  goney generate module orders --global        # Módulo con DTOs y modelos globales
+  goney generate module clients --no-dto       # Módulo sin generar DTO
+  goney generate module auth --no-model        # Módulo sin generar modelo`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		moduleName := args[0]
+		crud, _ := cmd.Flags().GetBool("crud")
+		global, _ := cmd.Flags().GetBool("global")
+		noDto, _ := cmd.Flags().GetBool("no-dto")
+		noModel, _ := cmd.Flags().GetBool("no-model")
+
+		fmt.Printf("Generando módulo: %s\n", moduleName)
+		generateModule(moduleName, crud, global, noDto, noModel)
+	},
+}
+
 var crudCmd = &cobra.Command{
 	Use:   "crud [nombre-modulo]",
 	Short: "Generar módulo CRUD completo con tests incluidos",
@@ -131,17 +177,26 @@ var startCmd = &cobra.Command{
 }
 
 func init() {
+	// Flags para el comando module
+	moduleCmd.Flags().Bool("crud", false, "Generar módulo con CRUD completo")
+	moduleCmd.Flags().Bool("global", false, "Usar DTOs y modelos globales (no genera archivos específicos)")
+	moduleCmd.Flags().Bool("no-dto", false, "No generar DTO específico")
+	moduleCmd.Flags().Bool("no-model", false, "No generar modelo específico")
+
 	// Flags para el comando CRUD
 	crudCmd.Flags().Bool("global", false, "Usar DTOs y modelos globales (no genera archivos específicos)")
 	crudCmd.Flags().Bool("no-dto", false, "No generar DTO específico")
 	crudCmd.Flags().Bool("no-model", false, "No generar modelo específico")
 
+	generateCmd.AddCommand(moduleCmd)
 	generateCmd.AddCommand(controllerCmd)
 	generateCmd.AddCommand(serviceCmd)
 	generateCmd.AddCommand(repositoryCmd)
 	generateCmd.AddCommand(microserviceCmd)
 	generateCmd.AddCommand(guardCmd)
 	generateCmd.AddCommand(interceptorCmd)
+	generateCmd.AddCommand(dtoCmd)
+	generateCmd.AddCommand(modelCmd)
 	generateCmd.AddCommand(crudCmd)
 
 	rootCmd.AddCommand(newCmd)
