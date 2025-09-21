@@ -80,7 +80,7 @@ func (a *Application) setupRoutes() {
 			"status":  "ok",
 			"message": "Go-ney server is running",
 			"port":    a.config.Port,
-			"version": "1.0.0",
+			"version": "1.0.1",
 		})
 	})
 }
@@ -302,7 +302,7 @@ func getWelcomeHTML() string {
         </div>
 
         <div class="version">
-            Go-ney Framework v1.0.0 | Hecho con ❤️ para la comunidad Go
+            Go-ney Framework v1.0.1 | Hecho con ❤️ para la comunidad Go
         </div>
     </div>
 

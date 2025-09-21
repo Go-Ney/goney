@@ -227,7 +227,7 @@ func NewApplication(cfg interface{}) *Application {
             <a href="/api/v1/health">🩺 Health Check</a>
             <a href="https://github.com/tu-usuario/go-ney" target="_blank">📚 Documentación</a>
         </div>
-        <div class="version">Go-ney v1.0.0 | Puerto: {{.Port}}</div>
+        <div class="version">Go-ney v1.0.1 | Puerto: {{.Port}}</div>
     </div>
 </body>
 </html>` + "`" + `
@@ -240,7 +240,7 @@ func NewApplication(cfg interface{}) *Application {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ok",
 			"message": "Go-ney API está funcionando correctamente",
-			"version": "1.0.0",
+			"version": "1.0.1",
 			"port":    cfg,
 		})
 	})
