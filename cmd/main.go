@@ -9,7 +9,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:     "goney",
-	Version: "1.0.2",
+	Version: "1.0.3",
 	Short:   "Go-ney - Framework MVC para Go inspirado en NestJS",
 	Long: `Go-ney es un framework CLI inspirado en NestJS para crear aplicaciones Go
 con arquitectura MVC modular y soporte para microservicios TCP, NAT y gRPC.`,

@@ -35,4 +35,6 @@ jobs:
         version: latest
         args: release --clean
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Prefer a Personal Access Token (PAT) with repo write to publish to external taps/buckets
+        GITHUB_TOKEN: ${{ secrets.GH_PAT != '' && secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        GORELEASER_CURRENT_TOKEN: ${{ secrets.GH_PAT != '' && secrets.GH_PAT || secrets.GITHUB_TOKEN }}
