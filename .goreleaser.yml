@@ -1,0 +1,145 @@
+# Build customization
+builds:
+  - binary: goney
+    main: ./cmd/
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+# Archive customization
+archives:
+  - format: tar.gz
+    name_template: "goney_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+# Checksums
+checksum:
+  name_template: 'checksums.txt'
+
+# Snapshot settings
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+# Changelog
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: 'New Features'
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 10
+    - title: Other
+      order: 999
+
+# Release settings
+release:
+  github:
+    owner: Go-Ney
+    name: goney
+  name_template: "Release {{.Tag}}"
+  header: |
+    ## 🚀 Go-Ney Framework {{.Tag}}
+
+    Welcome to Go-Ney {{.Tag}}! This release includes new features, improvements and bug fixes.
+
+    ### 📦 Installation
+
+    #### Option 1: Download Binary
+    Download the appropriate binary for your OS from the assets below.
+
+    #### Option 2: Go Install
+    ```bash
+    go install github.com/Go-Ney/goney/cmd@{{.Tag}}
+    ```
+
+    #### Option 3: Installation Script
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/Go-Ney/goney/main/install.sh | bash
+    ```
+
+  footer: |
+    **Full Changelog**: https://github.com/Go-Ney/goney/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ## 🚀 Quick Start
+    ```bash
+    # Create new project
+    goney new my-project
+    cd my-project
+
+    # Generate CRUD module
+    goney generate crud users
+
+    # Start development server
+    goney start
+    ```
+
+# Homebrew tap
+brews:
+  - name: goney
+    repository:
+      owner: Go-Ney
+      name: homebrew-tap
+    homepage: "https://github.com/Go-Ney/goney"
+    description: "Go framework inspired by NestJS for building modular applications"
+    license: "MIT"
+    install: |
+      bin.install "goney"
+    test: |
+      system "#{bin}/goney", "--help"
+
+# Scoop bucket for Windows
+scoops:
+  - name: goney
+    repository:
+      owner: Go-Ney
+      name: scoop-bucket
+    homepage: "https://github.com/Go-Ney/goney"
+    description: "Go framework inspired by NestJS for building modular applications"
+    license: "MIT"
+
+# Docker images
+dockers:
+  - image_templates:
+      - "ghcr.io/go-ney/goney:{{ .Tag }}"
+      - "ghcr.io/go-ney/goney:v{{ .Major }}"
+      - "ghcr.io/go-ney/goney:v{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/go-ney/goney:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
