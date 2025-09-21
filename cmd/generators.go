@@ -10,6 +10,11 @@ import (
 )
 
 func createNewProject(projectName string) {
+	// Derivar módulo de importación: si el usuario pasó --module, úsalo; si no, usa el basename
+	modulePath := filepath.Base(projectName)
+	if overrideModulePath != "" {
+		modulePath = overrideModulePath
+	}
 	dirs := []string{
 		"src/modules",
 		"src/common/dto",
@@ -19,12 +24,11 @@ func createNewProject(projectName string) {
 		"src/common/enums",
 		"src/common/middleware",
 		"src/common/models",
-		"src/config",
+		"config",
 		"pkg/core",
 		"docs",
 		"tests",
 	}
-
 
 	for _, dir := range dirs {
 		err := os.MkdirAll(filepath.Join(projectName, dir), 0755)
@@ -34,29 +38,41 @@ func createNewProject(projectName string) {
 		}
 	}
 
-	createMainFile(projectName)
+	createMainFile(projectName, modulePath)
 	createConfigFile(projectName)
 	createCoreFile(projectName)
-	createGoMod(projectName)
+	createGoMod(projectName, modulePath)
 	createEnvFile(projectName)
 	createDockerfile(projectName)
-	createAppModule(projectName)
+	createAppModule(projectName, modulePath)
+
+    // Instalar dependencias iniciales para generar go.sum
+    fmt.Println("📦 Instalando dependencias del nuevo proyecto (go mod tidy)...")
+    if err := runCommandInDir(projectName, "go", "mod", "tidy"); err != nil {
+        fmt.Printf("⚠️  Aviso: no se pudo ejecutar 'go mod tidy' en %s: %v\n", projectName, err)
+    }
+
+    // Compilar para validar que todo esté correcto
+    fmt.Println("🔧 Compilando proyecto inicial (go build .)...")
+    if err := runCommandInDir(projectName, "go", "build", "."); err != nil {
+        fmt.Printf("⚠️  Aviso: la compilación inicial falló en %s: %v\n", projectName, err)
+    }
 	fmt.Printf("✅ Proyecto Go-ney %s creado exitosamente!\n", projectName)
-	fmt.Printf("🌐 Para iniciar: cd %s && goney start\n", projectName)
+	fmt.Printf("🌐 Para iniciar: cd %s && goney start (este comando instala deps, compila y ejecuta)\n", projectName)
 	fmt.Printf("🔧 Puerto por defecto: 8080\n")
 	fmt.Printf("📝 Variables de entorno: .env\n")
 	fmt.Printf("📁 Estructura modular como NestJS creada en src/modules/\n")
 }
 
-func createMainFile(projectName string) {
+func createMainFile(projectName, modulePath string) {
 	mainTemplate := `package main
 
 import (
 	"fmt"
 	"log"
 	"os"
-	"{{.ProjectName}}/config"
-	"{{.ProjectName}}/pkg/core"
+	"{{.ModulePath}}/config"
+	"{{.ModulePath}}/pkg/core"
 )
 
 func main() {
@@ -78,7 +94,7 @@ func main() {
 	tmpl, _ := template.New("main").Parse(mainTemplate)
 	file, _ := os.Create(filepath.Join(projectName, "main.go"))
 	defer file.Close()
-	tmpl.Execute(file, map[string]string{"ProjectName": projectName})
+	tmpl.Execute(file, map[string]string{"ModulePath": modulePath})
 }
 
 func createConfigFile(projectName string) {
@@ -263,8 +279,8 @@ func (app *Application) Listen(addr string) error {
 	tmpl.Execute(file, map[string]string{"ProjectName": projectName})
 }
 
-func createGoMod(projectName string) {
-	goModTemplate := `module {{.ProjectName}}
+func createGoMod(projectName, modulePath string) {
+	goModTemplate := `module {{.ModulePath}}
 
 go 1.23
 
@@ -281,7 +297,7 @@ require (
 	tmpl, _ := template.New("gomod").Parse(goModTemplate)
 	file, _ := os.Create(filepath.Join(projectName, "go.mod"))
 	defer file.Close()
-	tmpl.Execute(file, map[string]string{"ProjectName": projectName})
+	tmpl.Execute(file, map[string]string{"ModulePath": modulePath})
 }
 
 func createEnvFile(projectName string) {
@@ -430,12 +446,12 @@ volumes:
 	tmpl.Execute(composeFile, map[string]string{"ProjectName": projectName})
 }
 
-func createAppModule(projectName string) {
+func createAppModule(projectName, modulePath string) {
 	appModuleTemplate := `package main
 
 import (
-	"{{.ProjectName}}/config"
-	"{{.ProjectName}}/pkg/core"
+	"{{.ModulePath}}/config"
+	"{{.ModulePath}}/pkg/core"
 )
 
 type AppModule struct {
@@ -483,17 +499,17 @@ func (app *AppModule) Bootstrap() error {
 	tmpl, _ := template.New("app-module").Parse(appModuleTemplate)
 	file, _ := os.Create(filepath.Join(projectName, "src", "app.module.go"))
 	defer file.Close()
-	tmpl.Execute(file, map[string]string{"ProjectName": projectName})
+	tmpl.Execute(file, map[string]string{"ModulePath": modulePath})
 }
 
 func generateModuleController(moduleName string, global bool) {
-    project := getProjectModuleName()
-    dtoImport := fmt.Sprintf("\"%s/src/modules/%s/dto\"", project, moduleName)
-    dtoTypePrefix := "dto."
-    if global {
-        dtoImport = fmt.Sprintf("\"%s/src/common/dto\"", project)
-        dtoTypePrefix = "dto.Base"
-    }
+	project := getProjectModuleName()
+	dtoImport := fmt.Sprintf("\"%s/src/modules/%s/dto\"", project, moduleName)
+	dtoTypePrefix := "dto."
+	if global {
+		dtoImport = fmt.Sprintf("\"%s/src/common/dto\"", project)
+		dtoTypePrefix = "dto.Base"
+	}
 
     controllerTemplate := `package controllers
 
@@ -1396,10 +1412,19 @@ func startDevServer() {
 }
 
 func runCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+    cmd := exec.Command(name, args...)
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+    return cmd.Run()
+}
+
+// runCommandInDir ejecuta un comando en un directorio de trabajo específico
+func runCommandInDir(dir string, name string, args ...string) error {
+    cmd := exec.Command(name, args...)
+    cmd.Dir = dir
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+    return cmd.Run()
 }
 
 // --- Stubs de compatibilidad para comandos legacy ---
